@@ -1,0 +1,107 @@
+# ============================================================
+#  抖音瘦身 · Douyin Lite  —— 基础版
+#  ----------------------------------------------------------
+#  作用：拦截抖音内的穿山甲 / 巨量引擎广告请求与埋点，
+#        减少「下载 → 解码 → 缓存」链路上的内存与流量占用。
+#
+#  基础版特性：零 MITM、零证书、零脚本，只做域名拦截。
+#             导入即用，不会因为证书问题导致任何功能打不开。
+#
+#  ⚠️ 抖音信息流广告的视频素材和正常视频**共用同一个 CDN**
+#     （douyinvod.com / douyinpic.com），所以没法按域名拦。
+#     基础版拦的是广告 SDK、投放平台和埋点；
+#     想干掉信息流广告本身，用 douyin-lite-plus.yaml 拦广告接口。
+#
+#  ⚠️ 规则顺序：客户端从上到下匹配第一条命中的规则。若你的主配置
+#     里有更靠前的宽泛规则（如 DOMAIN-SUFFIX,snssdk.com,DIRECT），
+#     会抢先命中导致本模块失效。请把本模块规则置于其之前。
+#     验证：请求记录 → 刷抖音 → 看是否显示 REJECT。
+#
+#  域名清单交叉验证自社区模块（LoonKissSurge 广告平台拦截器 /
+#  blackmatrix7 ios_rule_script Advertising、ByteDance 规则集）。
+# ============================================================
+
+name: "抖音瘦身 · Douyin Lite"
+description: "拦截抖音内的穿山甲 / 巨量引擎广告与埋点请求，减少广告视频下载与解码带来的内存占用。基础版，无需 MITM 与证书。"
+author: "Minis"
+homepage: "https://github.com/k6nfmm7dbr-commits/douyin-lite"
+manual: "https://github.com/k6nfmm7dbr-commits/douyin-lite#readme"
+icon: "https://raw.githubusercontent.com/k6nfmm7dbr-commits/douyin-lite/main/icon.png"
+open_url: "https://apps.apple.com/cn/app/id1142110895"
+
+
+rules:
+
+  # ── 穿山甲 / Pangle 广告 SDK ────────────────────────────
+  # 字节自家的广告 SDK，覆盖 pangolin-sdk-toutiao{,-b,1}.com、
+  # pangolin-dsp-toutiao{,-b}.com 等一整个家族。
+  - domain_suffix:
+      match: "pangle.cn"
+      policy: REJECT
+  - domain_suffix:
+      match: "pangle.io"
+      policy: REJECT
+  - domain_keyword:
+      match: "pangolin"
+      policy: REJECT
+  - domain_keyword:
+      match: "pglstatp-toutiao"
+      policy: REJECT
+
+  # ── 巨量引擎（字节广告投放平台）─────────────────────────
+  - domain_suffix:
+      match: "oceanengine.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "oceanengine.cn"
+      policy: REJECT
+
+  # ── 广告投放 / 购物广告 / 试玩广告 ──────────────────────
+  - domain_suffix:
+      match: "ad.toutiao.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "adshare.toutiao.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "shoppingads.cn"
+      policy: REJECT
+  - domain_keyword:
+      match: "panplayable-toutiao"
+      policy: REJECT
+  # 字节 API 域里带 ads 的广告请求子域
+  - domain_regex:
+      match: "^.*ads.*-normal\\.zijieapi\\.com$"
+      policy: REJECT
+
+  # ── 埋点 / 日志上报 ─────────────────────────────────────
+  # 对内存帮助很小（省一点网络与后台线程），风险也低。
+  - domain:
+      match: "extlog.snssdk.com"
+      policy: REJECT
+  - domain:
+      match: "mcs.snssdk.com"
+      policy: REJECT
+  - domain:
+      match: "sdfp.snssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "bds.snssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "ctobsnssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "volceapplog.com"
+      policy: REJECT
+
+
+# ── 故意没做的事 ────────────────────────────────────────────
+# ✗ 拦视频 CDN（douyinvod.com / douyinpic.com / douyinstatic.com）
+#   → 广告和正常内容共用，拦了抖音直接不能看
+# ✗ 拦 API 主域（amemv.com / snssdk.com / zijieapi.com）
+#   → 抖音直接打不开，只拦其中明确带 ads 的子域
+# ✗ 拦直播、商城相关域 → 对应功能直接坏
+# ✗ 用 jq 脚本删侧边栏 / 常用功能 → 那是 UI 精简不是省内存，
+#   且依赖会变的接口结构，容易随版本失效
+# 这些的收益应该用 App 内设置去拿，见 README。

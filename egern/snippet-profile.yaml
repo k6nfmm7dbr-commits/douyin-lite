@@ -1,0 +1,102 @@
+# ============================================================
+#  抖音瘦身 · 主配置片段
+#  ----------------------------------------------------------
+#  不想托管模块文件？把下面的 rules 直接粘进 Egern 主配置
+#  （Profile.yaml）的 rules 列表里即可，效果完全一样。
+#
+#  ⚠️ 位置很重要：客户端从上到下匹配第一条命中的规则。
+#     请把这段放在任何宽泛的直连规则之前，例如：
+#
+#         - domain_suffix: {match: "snssdk.com", policy: DIRECT}   ← 必须在下面这段之后
+#
+#     放错位置 = 完全失效。
+#
+#  验证：请求记录 → 刷抖音 → 看是否显示 REJECT。
+# ============================================================
+
+rules:
+
+  # ── 穿山甲 / Pangle 广告 SDK ──
+  - domain_suffix:
+      match: "pangle.cn"
+      policy: REJECT
+  - domain_suffix:
+      match: "pangle.io"
+      policy: REJECT
+  - domain_keyword:
+      match: "pangolin"
+      policy: REJECT
+  - domain_keyword:
+      match: "pglstatp-toutiao"
+      policy: REJECT
+
+  # ── 巨量引擎（字节广告投放平台）──
+  - domain_suffix:
+      match: "oceanengine.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "oceanengine.cn"
+      policy: REJECT
+
+  # ── 广告投放 / 购物广告 / 试玩广告 ──
+  - domain_suffix:
+      match: "ad.toutiao.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "adshare.toutiao.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "shoppingads.cn"
+      policy: REJECT
+  - domain_keyword:
+      match: "panplayable-toutiao"
+      policy: REJECT
+  - domain_regex:
+      match: "^.*ads.*-normal\\.zijieapi\\.com$"
+      policy: REJECT
+
+  # ── 埋点 / 日志上报（对内存帮助很小，介意可注释掉）──
+  - domain:
+      match: "extlog.snssdk.com"
+      policy: REJECT
+  - domain:
+      match: "mcs.snssdk.com"
+      policy: REJECT
+  - domain:
+      match: "sdfp.snssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "bds.snssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "ctobsnssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "volceapplog.com"
+      policy: REJECT
+
+
+# ============================================================
+#  进阶玩法：信息流广告接口拦截（需要 MITM + 信任证书，默认关闭）
+#  抖音拉广告走 /api/ad/，返回 {} 后整条广告视频不会下载也不会解码。
+#  ⚠️ 这会解密抖音主 API 域，风险面最大的一段，遇到问题就删掉。
+# ============================================================
+#
+# map_locals:
+#   - match: '^https://(aweme\.snssdk\.com|api[0-9]*-normal-[a-z0-9-]+\.amemv\.com)/api/ad/'
+#     status_code: 200
+#     headers:
+#       Content-Type: application/json
+#     body: '{}'
+#   - match: '^https://zlink\.ugsdk\.cn/ad/'
+#     status_code: 200
+#     headers:
+#       Content-Type: application/json
+#     body: '{}'
+#
+# mitm:
+#   hostnames:
+#     includes:
+#       - "aweme.snssdk.com"
+#       - "api*-normal-*.amemv.com"
+#       - "zlink.ugsdk.cn"

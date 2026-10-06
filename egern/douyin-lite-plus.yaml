@@ -1,0 +1,135 @@
+# ============================================================
+#  抖音瘦身 · Douyin Lite  —— 进阶版 (Plus)
+#  ----------------------------------------------------------
+#  = 基础版全部规则
+#    + 信息流广告接口拦截（Map Local 返回空 JSON）
+#
+#  ⚠️ 本版**需要 MITM + 安装并信任 CA 证书**。
+#     如果证书没装好，下面这些改写规则不会生效（不会报错），
+#     但域名拦截部分仍然照常工作。
+#
+#  如果你不想装证书 —— 用 douyin-lite.yaml（基础版）。
+#
+#  为什么必须拦接口而不是拦域名：
+#    抖音信息流广告的视频素材和正常视频共用同一个 CDN
+#    （douyinvod.com / douyinpic.com），域名层面完全没法区分。
+#    唯一的区分点是请求路径 /api/ad/ —— 只有 MITM 才能看到路径。
+#
+#  验证 MITM 是否生效：
+#     工具 → MITM → 确认 aweme.snssdk.com 在 hostname 列表里，
+#     且「证书」已安装并信任（iOS 设置 → 通用 → VPN与设备管理，
+#     以及 设置 → 通用 → 关于本机 → 证书信任设置）。
+# ============================================================
+
+name: "抖音瘦身 · Douyin Lite Plus"
+description: "基础版全部规则 + 信息流广告接口拦截（Map Local 返回空 JSON）。需要 MITM 与信任证书。"
+author: "Minis"
+homepage: "https://github.com/k6nfmm7dbr-commits/douyin-lite"
+manual: "https://github.com/k6nfmm7dbr-commits/douyin-lite#readme"
+icon: "https://raw.githubusercontent.com/k6nfmm7dbr-commits/douyin-lite/main/icon.png"
+open_url: "https://apps.apple.com/cn/app/id1142110895"
+
+
+rules:
+
+  # ── 穿山甲 / Pangle 广告 SDK ────────────────────────────
+  - domain_suffix:
+      match: "pangle.cn"
+      policy: REJECT
+  - domain_suffix:
+      match: "pangle.io"
+      policy: REJECT
+  - domain_keyword:
+      match: "pangolin"
+      policy: REJECT
+  - domain_keyword:
+      match: "pglstatp-toutiao"
+      policy: REJECT
+
+  # ── 巨量引擎（字节广告投放平台）─────────────────────────
+  - domain_suffix:
+      match: "oceanengine.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "oceanengine.cn"
+      policy: REJECT
+
+  # ── 广告投放 / 购物广告 / 试玩广告 ──────────────────────
+  - domain_suffix:
+      match: "ad.toutiao.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "adshare.toutiao.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "shoppingads.cn"
+      policy: REJECT
+  - domain_keyword:
+      match: "panplayable-toutiao"
+      policy: REJECT
+  - domain_regex:
+      match: "^.*ads.*-normal\\.zijieapi\\.com$"
+      policy: REJECT
+
+  # ── 埋点 / 日志上报 ─────────────────────────────────────
+  - domain:
+      match: "extlog.snssdk.com"
+      policy: REJECT
+  - domain:
+      match: "mcs.snssdk.com"
+      policy: REJECT
+  - domain:
+      match: "sdfp.snssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "bds.snssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "ctobsnssdk.com"
+      policy: REJECT
+  - domain_suffix:
+      match: "volceapplog.com"
+      policy: REJECT
+
+
+# ── 信息流广告接口 → 直接返回空 JSON ────────────────────────
+# 这是本版的核心：抖音拉广告走 /api/ad/，返回 {} 后 App 拿到的
+# 就是「这次没有广告」，于是**整条广告视频不会下载、不会解码**。
+# 一条信息流广告视频和正常视频一样要占解码器 + 缓冲内存，
+# 所以这是抖音这边最实在的内存收益点。
+#
+# 用返回 {} 而不是直接 reject：reject 会断开连接，App 可能当成
+# 网络错误去重试，反而多出请求。给个合法空响应最干净。
+map_locals:
+  # 抖音主 API 域下的广告接口（api5-normal-m / api3-normal-c-lf 等按地区/线路变化，用正则覆盖）
+  - match: '^https://(aweme\.snssdk\.com|api[0-9]*-normal-[a-z0-9-]+\.amemv\.com)/api/ad/'
+    status_code: 200
+    headers:
+      Content-Type: application/json
+    body: '{}'
+  # 广告跳转短链
+  - match: '^https://zlink\.ugsdk\.cn/ad/'
+    status_code: 200
+    headers:
+      Content-Type: application/json
+    body: '{}'
+
+
+# ── MITM ───────────────────────────────────────────────────
+# ⚠️ 这里解密的是抖音的**主 API 域**，是整个项目风险面最大的一段：
+#    如果抖音启用了证书固定（cert pinning），MITM 会让这些域直接
+#    连不上，表现为抖音打不开 / 一直转圈。真遇到就删掉这一段，
+#    回到基础版（基础版的域名拦截已经能拿到大部分收益）。
+#
+# 只解密承载广告接口的这几个域，不碰视频 CDN、直播、支付相关域。
+mitm:
+  hostnames:
+    includes:
+      - "aweme.snssdk.com"
+      - "api*-normal-*.amemv.com"
+      - "zlink.ugsdk.cn"
+  # 如果上面的写法在你的 Egern 版本里没生效，改用下面的平铺写法：
+  # hostnames:
+  #   - "aweme.snssdk.com"
+  #   - "api*-normal-*.amemv.com"
+  #   - "zlink.ugsdk.cn"

@@ -1,0 +1,44 @@
+#!name = 抖音瘦身 · Douyin Lite
+#!desc = 拦截抖音内的穿山甲 / 巨量引擎广告与埋点请求，减少广告视频下载与解码带来的内存占用。基础版，无需 MitM 与证书。
+#!author = Minis
+#!icon = https://raw.githubusercontent.com/k6nfmm7dbr-commits/douyin-lite/main/icon.png
+#!homepage = https://github.com/k6nfmm7dbr-commits/douyin-lite
+#!tag = 去广告,抖音,内存
+#!loon_version = 3.2.4(787)
+# ------------------------------------------------------------
+# Loon 插件。规则会合并进你的规则列表，请确认它排在更宽泛的
+# snssdk.com / amemv.com 直连规则之前，否则不会生效。
+#
+# 抖音信息流广告的视频素材和正常视频共用同一个 CDN，没法按域名拦。
+# 本插件拦的是广告 SDK、投放平台和埋点。
+# 想干掉信息流广告本身：用 Script-Hub 把 surge/douyin-lite-plus.sgmodule
+# 一键转成 Loon 插件（它需要 MitM）。
+#   https://script-hub.nfdns.top
+# ------------------------------------------------------------
+
+[Rule]
+
+# ── 穿山甲 / Pangle 广告 SDK ──
+DOMAIN-SUFFIX,pangle.cn,REJECT
+DOMAIN-SUFFIX,pangle.io,REJECT
+DOMAIN-KEYWORD,pangolin,REJECT
+DOMAIN-KEYWORD,pglstatp-toutiao,REJECT
+
+# ── 巨量引擎（字节广告投放平台）──
+DOMAIN-SUFFIX,oceanengine.com,REJECT
+DOMAIN-SUFFIX,oceanengine.cn,REJECT
+
+# ── 广告投放 / 购物广告 / 试玩广告 ──
+DOMAIN-SUFFIX,ad.toutiao.com,REJECT
+DOMAIN-SUFFIX,adshare.toutiao.com,REJECT
+DOMAIN-SUFFIX,shoppingads.cn,REJECT
+DOMAIN-KEYWORD,panplayable-toutiao,REJECT
+DOMAIN-REGEX,^.*ads.*-normal\.zijieapi\.com$,REJECT
+
+# ── 埋点 / 日志上报（对内存帮助很小，介意可注释掉）──
+DOMAIN,extlog.snssdk.com,REJECT
+DOMAIN,mcs.snssdk.com,REJECT
+DOMAIN,sdfp.snssdk.com,REJECT
+DOMAIN-SUFFIX,bds.snssdk.com,REJECT
+DOMAIN-SUFFIX,ctobsnssdk.com,REJECT
+DOMAIN-SUFFIX,volceapplog.com,REJECT
