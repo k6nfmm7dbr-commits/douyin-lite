@@ -106,14 +106,16 @@ for path in text_files():
     compare(path, rules)
 
     if is_plus(path):
+        # 只看生效行，注释掉的段不算（基础版/进阶版都会把可选段注释掉）
+        live = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith("#"))
         section_to_key = {"[Map Local]": "map_locals",
                           "[URL Rewrite]": "url_rewrites",
                           "[MITM]": "mitm"}
         features = {key for section, key in section_to_key.items()
-                    if section in text}
+                    if section in live}
         plus_features.setdefault("text", set()).update(features)
         for section in ("[Map Local]", "[MITM]"):
-            if section not in text:
+            if section not in live:
                 err(f"{rel}: 进阶版缺少 {section}")
     else:
         for line in text.splitlines():
